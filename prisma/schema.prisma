@@ -1,0 +1,238 @@
+// Prisma schema — Website bán ống nước
+// Tham khảo mục 8 (Thiết kế CSDL) trong PHAN-TICH-NGHIEP-VU.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----- Người dùng -----
+// Role (SQLite không hỗ trợ enum → dùng String):
+// CUSTOMER | WHOLESALE | SALES | WAREHOUSE | ADMIN
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  name        String
+  phone       String?
+  role        String    @default("CUSTOMER")
+  companyName String? // tên công ty (B2C/B2B)
+  taxCode     String? // mã số thuế
+  orders      Order[]
+  quotations  Quotation[]
+  addresses   Address[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// ----- Danh mục (cây cha-con) -----
+model Category {
+  id       Int        @id @default(autoincrement())
+  name     String
+  slug     String     @unique
+  image    String? // ảnh đại diện danh mục
+  parentId Int?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+  createdAt DateTime  @default(now())
+}
+
+// ----- Thương hiệu -----
+model Brand {
+  id       Int       @id @default(autoincrement())
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+// ----- Sản phẩm -----
+model Product {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  name        String
+  slug        String   @unique
+  description String?
+  // Thông số kỹ thuật đặc thù ngành ống nước
+  material    String? // uPVC, HDPE, PPR, inox...
+  diameter    String? // đường kính danh nghĩa: DN20, Ø90...
+  pressure    String? // class áp lực: PN10, PN16...
+  standard    String? // tiêu chuẩn: TCVN, ISO...
+  unit        String   @default("cây") // đơn vị tính: cây, mét, cuộn, cái...
+  packaging   String? // quy cách đóng gói
+  imageUrl    String? // ảnh đại diện
+
+  retailPrice    Float // giá lẻ
+  wholesalePrice Float? // giá sỉ tham khảo
+  stock          Int      @default(0) // tồn kho
+  isActive       Boolean  @default(true)
+  isFeatured     Boolean  @default(false)
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  brandId    Int?
+  brand      Brand?   @relation(fields: [brandId], references: [id])
+
+  images      ProductImage[]
+  priceTiers  PriceTier[] // bảng giá theo bậc số lượng
+  orderItems  OrderItem[]
+  quotationItems QuotationItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  url       String
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// Bảng giá theo bậc số lượng (cho khách sỉ)
+model PriceTier {
+  id        Int     @id @default(autoincrement())
+  minQty    Int // số lượng tối thiểu
+  price     Float
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ----- Địa chỉ giao hàng -----
+model Address {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String
+  line      String // số nhà, đường
+  ward      String? // phường/xã
+  district  String? // quận/huyện
+  province  String? // tỉnh/thành
+  isDefault Boolean @default(false)
+}
+
+// ----- Đơn hàng -----
+// status: PENDING | CONFIRMED | SHIPPING | COMPLETED | CANCELLED
+model Order {
+  id            Int         @id @default(autoincrement())
+  code          String      @unique // mã đơn: DH-xxxxx
+  userId        Int?
+  user          User?       @relation(fields: [userId], references: [id])
+  // Thông tin nhận hàng (lưu snapshot)
+  customerName  String
+  customerPhone String
+  customerEmail String?
+  shippingAddress String
+  note          String?
+
+  paymentMethod String      @default("COD")
+  status        String      @default("PENDING")
+  subtotal      Float
+  shippingFee   Float       @default(0)
+  total         Float
+
+  items     OrderItem[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  // snapshot tại thời điểm mua
+  productName String
+  unit        String
+  price       Float
+  quantity    Int
+  lineTotal   Float
+}
+
+// ----- Báo giá (RFQ) cho khách sỉ / nhà thầu -----
+// status: NEW | QUOTED | ACCEPTED | REJECTED
+model Quotation {
+  id           Int             @id @default(autoincrement())
+  code         String          @unique // BG-xxxxx
+  userId       Int?
+  user         User?           @relation(fields: [userId], references: [id])
+  customerName String
+  customerPhone String
+  customerEmail String?
+  note         String?
+  status       String          @default("NEW")
+  vatPercent   Float           @default(0) // % VAT áp dụng khi báo giá
+  discount     Float           @default(0) // chiết khấu (số tiền)
+  items        QuotationItem[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model QuotationItem {
+  id           Int       @id @default(autoincrement())
+  quotationId  Int
+  quotation    Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  productId    Int? // tùy chọn: cho phép báo giá sản phẩm gõ tự do (không có trong kho)
+  product      Product?  @relation(fields: [productId], references: [id])
+  productName  String
+  unit         String
+  quantity     Int
+  quotedPrice  Float? // giá sales báo lại
+}
+
+// ===== CMS: nội dung site có thể sửa trong admin =====
+
+// Cấu hình site & nội dung trang chủ — lưu dạng key/value
+model Setting {
+  key   String @id
+  value String
+}
+
+// Công trình tiêu biểu
+model Project {
+  id        Int      @id @default(autoincrement())
+  title     String
+  location  String
+  scope     String
+  year      String
+  tag       String
+  image     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Tin tức / bài viết
+model Article {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  category    String
+  author      String
+  image       String?
+  // body: các đoạn cách nhau bằng dòng trống; dòng bắt đầu "## " là tiêu đề phụ
+  body        String
+  isPublished Boolean  @default(true)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Lời nhắn từ form Liên hệ
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String?
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
