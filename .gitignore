@@ -7,3 +7,5 @@ out
 .env
 .DS_Store
 next-env.d.ts
+
+*.tsbuildinfo

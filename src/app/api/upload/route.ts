@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { getSession } from "@/lib/auth";
-import { UPLOAD_DIR } from "@/lib/uploads";
+import { getStorageClient, STORAGE_BUCKET } from "@/lib/storage";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -30,12 +28,31 @@ export async function POST(req: Request) {
   }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  await mkdir(UPLOAD_DIR, { recursive: true });
-
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const ext = (file.name.split(".").pop() || "jpg")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
   const filename = `sp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  await writeFile(path.join(UPLOAD_DIR, filename), bytes);
 
-  // Phục vụ qua route động /api/media để hoạt động cả ở production
-  return NextResponse.json({ url: `/api/media/${filename}` });
+  // Tải ảnh lên Supabase Storage (hoạt động trên Vercel — không ghi xuống ổ đĩa)
+  const supabase = getStorageClient();
+  const { error } = await supabase.storage
+    .from(STORAGE_BUCKET)
+    .upload(filename, bytes, {
+      contentType: file.type,
+      cacheControl: "31536000",
+      upsert: false,
+    });
+
+  if (error) {
+    return NextResponse.json(
+      { error: `Lỗi tải ảnh lên Storage: ${error.message}` },
+      { status: 500 }
+    );
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
+
+  return NextResponse.json({ url: publicUrl });
 }
