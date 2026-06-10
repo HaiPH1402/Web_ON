@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getStorageClient, STORAGE_BUCKET } from "@/lib/storage";
+import { uploadToStorage } from "@/lib/storage";
 
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -34,25 +34,14 @@ export async function POST(req: Request) {
   const filename = `sp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
   // Tải ảnh lên Supabase Storage (hoạt động trên Vercel — không ghi xuống ổ đĩa)
-  const supabase = getStorageClient();
-  const { error } = await supabase.storage
-    .from(STORAGE_BUCKET)
-    .upload(filename, bytes, {
-      contentType: file.type,
-      cacheControl: "31536000",
-      upsert: false,
-    });
-
-  if (error) {
+  try {
+    const publicUrl = await uploadToStorage(filename, bytes, file.type);
+    return NextResponse.json({ url: publicUrl });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Lỗi không xác định";
     return NextResponse.json(
-      { error: `Lỗi tải ảnh lên Storage: ${error.message}` },
+      { error: `Lỗi tải ảnh lên Storage: ${msg}` },
       { status: 500 }
     );
   }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filename);
-
-  return NextResponse.json({ url: publicUrl });
 }
