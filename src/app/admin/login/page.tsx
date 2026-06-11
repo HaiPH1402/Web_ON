@@ -46,19 +46,16 @@ export default function AdminLoginPage() {
         <div className="space-y-4">
           <div>
             <label className="label">Email</label>
-            <input name="email" type="email" required className="input" defaultValue="admin@ongnuoc.vn" />
+            <input name="email" type="email" required className="input" autoComplete="username" />
           </div>
           <div>
             <label className="label">Mật khẩu</label>
-            <input name="password" type="password" required className="input" defaultValue="admin123" />
+            <input name="password" type="password" required className="input" autoComplete="current-password" />
           </div>
           <button disabled={loading} className="btn-primary w-full disabled:opacity-60">
             {loading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </div>
-        <p className="mt-4 text-center text-xs text-gray-400">
-          Demo: admin@ongnuoc.vn / admin123
-        </p>
       </form>
     </div>
   );
