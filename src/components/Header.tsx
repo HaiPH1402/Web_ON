@@ -144,7 +144,7 @@ export default function Header({
                     <span aria-hidden className="text-[10px]">▾</span>
                   </Link>
                   {/* Dropdown */}
-                  <div className="invisible absolute left-0 top-full z-50 w-56 translate-y-1 rounded-xl border border-slate-200 bg-white p-2 opacity-0 shadow-hover transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="invisible absolute left-0 top-full z-50 max-h-[70vh] w-80 translate-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 opacity-0 shadow-hover transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
                     {n.children.map((c) => (
                       <Link
                         key={c.label}
