@@ -1,0 +1,10 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="14" fill="#0284c7"/>
+  <!-- khúc co ống nước (elbow) -->
+  <path d="M22 9 V32 a10 10 0 0 0 10 10 H55"
+        fill="none" stroke="#ffffff" stroke-width="12"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- vành nối (flange) hai đầu ống -->
+  <rect x="14" y="6" width="16" height="7" rx="3" fill="#bae6fd"/>
+  <rect x="51" y="34" width="7" height="16" rx="3" fill="#bae6fd"/>
+</svg>
