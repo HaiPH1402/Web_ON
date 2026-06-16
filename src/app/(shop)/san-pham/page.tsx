@@ -56,7 +56,10 @@ export default async function ProductsPage({
       take: PAGE_SIZE,
     }),
     prisma.category.findMany({ orderBy: { id: "asc" } }),
-    prisma.brand.findMany({ orderBy: { name: "asc" } }),
+    prisma.brand.findMany({
+      where: { products: { some: { isActive: true } } },
+      orderBy: { name: "asc" },
+    }),
     prisma.product.findMany({
       where: { isActive: true, material: { not: null } },
       distinct: ["material"],

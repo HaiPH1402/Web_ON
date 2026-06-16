@@ -21,6 +21,7 @@ type Product = {
   stock: number;
   categoryId: number;
   brandId: number | null;
+  brand?: { name: string } | null;
   isActive: boolean;
   isFeatured: boolean;
 };
@@ -66,12 +67,21 @@ export default function ProductForm({
             </select>
           </Field>
           <Field label="Thương hiệu">
-            <select name="brandId" defaultValue={product?.brandId ?? ""} className="input">
-              <option value="">— Không —</option>
+            <input
+              name="brandName"
+              list="brand-options"
+              defaultValue={product?.brand?.name ?? ""}
+              className="input"
+              placeholder="Chọn hãng có sẵn hoặc gõ hãng mới..."
+            />
+            <datalist id="brand-options">
               {brands.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+                <option key={b.id} value={b.name} />
               ))}
-            </select>
+            </datalist>
+            <p className="mt-1 text-xs text-slate-400">
+              Gõ tên hãng mới → tự tạo. Để trống = không có thương hiệu.
+            </p>
           </Field>
         </div>
       </div>

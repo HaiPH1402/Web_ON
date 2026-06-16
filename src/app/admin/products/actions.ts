@@ -13,6 +13,19 @@ function str(v: FormDataEntryValue | null): string {
   return (v ?? "").toString().trim();
 }
 
+// Tìm thương hiệu theo tên, chưa có thì tự tạo mới. Trả về id (hoặc null nếu để trống).
+async function resolveBrandId(name: string): Promise<number | null> {
+  if (!name) return null;
+  const existing = await prisma.brand.findFirst({ where: { name } });
+  if (existing) return existing.id;
+  let slug = slugify(name);
+  if (await prisma.brand.findUnique({ where: { slug } })) {
+    slug = `${slug}-${Date.now().toString().slice(-4)}`;
+  }
+  const created = await prisma.brand.create({ data: { name, slug } });
+  return created.id;
+}
+
 // Tự sinh SKU duy nhất khi admin để trống
 async function generateSku(): Promise<string> {
   const count = await prisma.product.count();
@@ -28,6 +41,7 @@ export async function saveProduct(formData: FormData) {
   const id = formData.get("id") ? Number(formData.get("id")) : null;
   const name = str(formData.get("name"));
   const sku = str(formData.get("sku")) || (await generateSku());
+  const brandId = await resolveBrandId(str(formData.get("brandName")));
 
   const data = {
     name,
@@ -46,7 +60,7 @@ export async function saveProduct(formData: FormData) {
       : null,
     stock: num(formData.get("stock")),
     categoryId: num(formData.get("categoryId")),
-    brandId: formData.get("brandId") ? num(formData.get("brandId")) : null,
+    brandId,
     isActive: formData.get("isActive") === "on",
     isFeatured: formData.get("isFeatured") === "on",
   };
