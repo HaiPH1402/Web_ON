@@ -6,12 +6,15 @@ import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 12;
+
 type SearchParams = {
   category?: string;
   material?: string;
   brand?: string;
   q?: string;
   sort?: string;
+  page?: string;
 };
 
 export default async function ProductsPage({
@@ -41,8 +44,17 @@ export default async function ProductsPage({
   if (searchParams.sort === "price-asc") orderBy = { retailPrice: "asc" };
   if (searchParams.sort === "price-desc") orderBy = { retailPrice: "desc" };
 
-  const [products, categories, brands, materials] = await Promise.all([
-    prisma.product.findMany({ where, include: { brand: true }, orderBy }),
+  const page = Math.max(1, Number(searchParams.page) || 1);
+
+  const [total, products, categories, brands, materials] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      include: { brand: true },
+      orderBy,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
     prisma.category.findMany({ orderBy: { id: "asc" } }),
     prisma.brand.findMany({ orderBy: { name: "asc" } }),
     prisma.product.findMany({
@@ -52,10 +64,22 @@ export default async function ProductsPage({
     }),
   ]);
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Đổi bộ lọc / sắp xếp -> luôn quay về trang 1
   const buildQuery = (patch: Partial<SearchParams>) => {
     const params = new URLSearchParams();
-    const merged = { ...searchParams, ...patch };
+    const merged = { ...searchParams, ...patch, page: undefined };
     Object.entries(merged).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
+    return "/san-pham?" + params.toString();
+  };
+
+  // Link chuyển trang — giữ nguyên bộ lọc hiện tại
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    Object.entries({ ...searchParams, page: String(p) }).forEach(([k, v]) => {
       if (v) params.set(k, v);
     });
     return "/san-pham?" + params.toString();
@@ -138,7 +162,7 @@ export default async function ProductsPage({
         {/* Kết quả */}
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-sm text-gray-500">{products.length} sản phẩm</span>
+            <span className="text-sm text-gray-500">{total} sản phẩm</span>
             <div className="flex gap-2 text-sm">
               <Link href={buildQuery({ sort: "price-asc" })} className="btn-outline py-1">Giá ↑</Link>
               <Link href={buildQuery({ sort: "price-desc" })} className="btn-outline py-1">Giá ↓</Link>
@@ -154,6 +178,22 @@ export default async function ProductsPage({
               {products.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-center gap-2 text-sm">
+              {page > 1 ? (
+                <Link href={pageHref(page - 1)} className="btn-outline px-3 py-1.5">← Trước</Link>
+              ) : (
+                <span className="btn-outline cursor-not-allowed px-3 py-1.5 opacity-40">← Trước</span>
+              )}
+              <span className="px-3 text-gray-500">Trang {page}/{totalPages}</span>
+              {page < totalPages ? (
+                <Link href={pageHref(page + 1)} className="btn-outline px-3 py-1.5">Sau →</Link>
+              ) : (
+                <span className="btn-outline cursor-not-allowed px-3 py-1.5 opacity-40">Sau →</span>
+              )}
             </div>
           )}
         </div>
