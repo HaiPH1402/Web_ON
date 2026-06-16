@@ -24,8 +24,8 @@ export async function saveCategory(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  revalidatePath("/admin/categories");
-  redirect("/admin/categories");
+  revalidatePath("/admin/products");
+  redirect("/admin/products");
 }
 
 export async function deleteCategory(formData: FormData) {
@@ -35,5 +35,5 @@ export async function deleteCategory(formData: FormData) {
   if (count > 0) return;
   await prisma.category.delete({ where: { id } });
   revalidatePath("/", "layout");
-  revalidatePath("/admin/categories");
+  revalidatePath("/admin/products");
 }

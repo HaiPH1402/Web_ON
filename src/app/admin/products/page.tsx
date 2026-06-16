@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatVND } from "@/lib/format";
 import { deleteProduct } from "./actions";
+import { deleteCategory } from "../categories/actions";
 import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +12,17 @@ const PAGE_SIZE = 20;
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; page?: string };
+  searchParams: { q?: string; page?: string; cat?: string };
 }) {
   const q = searchParams.q?.trim();
+  const catId = Number(searchParams.cat) || undefined;
   const page = Math.max(1, Number(searchParams.page) || 1);
-  const where = q
-    ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
-    : undefined;
+  const where = {
+    ...(q ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] } : {}),
+    ...(catId ? { categoryId: catId } : {}),
+  };
 
-  const [total, products] = await Promise.all([
+  const [total, products, categories] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
@@ -28,29 +31,67 @@ export default async function AdminProductsPage({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
+    prisma.category.findMany({
+      orderBy: { id: "asc" },
+      include: { _count: { select: { products: true } } },
+    }),
   ]);
 
+  const allCount = categories.reduce((s, c) => s + c._count.products, 0);
+  const activeCat = categories.find((c) => c.id === catId);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  // Giữ nguyên danh mục đang lọc + từ khoá khi đổi trang
+  const baseParams = { ...(q ? { q } : {}), ...(catId ? { cat: String(catId) } : {}) };
   const qs = (p: number) =>
-    `?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
+    `?${new URLSearchParams({ ...baseParams, page: String(p) })}`;
+  // Link "Thêm sản phẩm": chọn sẵn danh mục đang xem
+  const newHref = catId ? `/admin/products/new?cat=${catId}` : "/admin/products/new";
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sản phẩm ({total})</h1>
-        <Link href="/admin/products/new" className="btn-primary">+ Thêm sản phẩm</Link>
+        <h1 className="text-2xl font-bold">
+          Sản phẩm{activeCat ? <span className="text-gray-400"> · {activeCat.name}</span> : ""} ({total})
+        </h1>
+        <Link href={newHref} className="btn-primary">+ Thêm sản phẩm</Link>
       </div>
 
-      <form className="mb-4">
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Tìm theo tên / mã SP..."
-          className="input max-w-xs"
-        />
-      </form>
+      <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
+        {/* Cột trái: danh mục (lọc + quản lý) */}
+        <aside className="card h-fit p-2">
+          <div className="flex items-center justify-between px-2 py-2">
+            <span className="text-sm font-semibold text-gray-700">Danh mục</span>
+            <Link href="/admin/categories/new" className="text-xs text-brand hover:underline">+ Thêm</Link>
+          </div>
+          <nav className="space-y-0.5">
+            <CatLink href="/admin/products" active={!catId} label="Tất cả sản phẩm" count={allCount} />
+            {categories.map((c) => (
+              <CatLink
+                key={c.id}
+                href={`/admin/products?cat=${c.id}`}
+                active={c.id === catId}
+                label={c.name}
+                count={c._count.products}
+                editHref={`/admin/categories/${c.id}`}
+                deleteId={c._count.products === 0 ? c.id : undefined}
+              />
+            ))}
+          </nav>
+        </aside>
 
-      <div className="card overflow-x-auto">
+        {/* Cột phải: tìm kiếm + bảng sản phẩm */}
+        <div>
+          <form className="mb-4">
+            {catId ? <input type="hidden" name="cat" value={catId} /> : null}
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Tìm theo tên / mã SP..."
+              className="input max-w-xs"
+            />
+          </form>
+
+          <div className="card overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-gray-50 text-left text-gray-600">
             <tr>
@@ -127,6 +168,59 @@ export default async function AdminProductsPage({
           )}
         </div>
       )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CatLink({
+  href,
+  active,
+  label,
+  count,
+  editHref,
+  deleteId,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  count: number;
+  editHref?: string;
+  deleteId?: number;
+}) {
+  return (
+    <div
+      className={`group flex items-center justify-between rounded-lg px-2 py-1.5 text-sm ${
+        active ? "bg-brand/10 font-semibold text-brand" : "text-gray-600 hover:bg-gray-50"
+      }`}
+    >
+      <Link href={href} className="flex-1 truncate">
+        {label}
+      </Link>
+      <div className="flex shrink-0 items-center gap-2 pl-2">
+        {editHref && (
+          <Link
+            href={editHref}
+            className="text-xs text-gray-300 opacity-0 hover:text-brand group-hover:opacity-100"
+            title="Sửa danh mục"
+          >
+            ✎
+          </Link>
+        )}
+        {deleteId && (
+          <form action={deleteCategory}>
+            <input type="hidden" name="id" value={deleteId} />
+            <ConfirmButton
+              className="text-xs text-gray-300 opacity-0 hover:text-red-500 group-hover:opacity-100"
+              message={`Xóa danh mục "${label}"?`}
+            >
+              ✕
+            </ConfirmButton>
+          </form>
+        )}
+        <span className={`text-xs ${active ? "text-brand" : "text-gray-400"}`}>{count}</span>
+      </div>
     </div>
   );
 }

@@ -30,10 +30,12 @@ export default function ProductForm({
   product,
   categories,
   brands,
+  defaultCategoryId,
 }: {
   product?: Product;
   categories: Category[];
   brands: Brand[];
+  defaultCategoryId?: number;
 }) {
   return (
     <form action={saveProduct} className="max-w-3xl">
@@ -60,7 +62,7 @@ export default function ProductForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Danh mục *">
-            <select name="categoryId" required defaultValue={product?.categoryId} className="input">
+            <select name="categoryId" required defaultValue={product?.categoryId ?? defaultCategoryId} className="input">
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

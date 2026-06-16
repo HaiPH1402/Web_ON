@@ -5,7 +5,6 @@ import "../globals.css";
 const NAV = [
   { href: "/admin", label: "Tổng quan", icon: "📊" },
   { href: "/admin/products", label: "Sản phẩm", icon: "📦" },
-  { href: "/admin/categories", label: "Danh mục", icon: "🗂️" },
   { href: "/admin/orders", label: "Đơn hàng", icon: "🧾" },
   { href: "/admin/quotations", label: "Báo giá (RFQ)", icon: "💬" },
   { href: "/admin/contacts", label: "Tin nhắn liên hệ", icon: "📨" },
