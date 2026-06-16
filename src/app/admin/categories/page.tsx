@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { deleteCategory } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default async function AdminCategoriesPage() {
                     {c._count.products === 0 ? (
                       <form action={deleteCategory}>
                         <input type="hidden" name="id" value={c.id} />
-                        <button className="text-red-500 hover:underline">Xóa</button>
+                        <ConfirmButton className="text-red-500 hover:underline" message="Xóa danh mục này?">Xóa</ConfirmButton>
                       </form>
                     ) : (
                       <span className="cursor-not-allowed text-gray-300" title="Còn sản phẩm, không thể xóa">

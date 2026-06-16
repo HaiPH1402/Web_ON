@@ -2,27 +2,42 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatVND } from "@/lib/format";
 import { deleteProduct } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
+
+const PAGE_SIZE = 20;
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: { q?: string; page?: string };
 }) {
   const q = searchParams.q?.trim();
-  const products = await prisma.product.findMany({
-    where: q
-      ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
-      : undefined,
-    include: { category: true, brand: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const page = Math.max(1, Number(searchParams.page) || 1);
+  const where = q
+    ? { OR: [{ name: { contains: q } }, { sku: { contains: q } }] }
+    : undefined;
+
+  const [total, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      include: { category: true, brand: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const qs = (p: number) =>
+    `?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sản phẩm ({products.length})</h1>
+        <h1 className="text-2xl font-bold">Sản phẩm ({total})</h1>
         <Link href="/admin/products/new" className="btn-primary">+ Thêm sản phẩm</Link>
       </div>
 
@@ -35,8 +50,8 @@ export default async function AdminProductsPage({
         />
       </form>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead className="bg-gray-50 text-left text-gray-600">
             <tr>
               <th className="px-4 py-3">Mã</th>
@@ -75,15 +90,43 @@ export default async function AdminProductsPage({
                     <Link href={`/admin/products/${p.id}`} className="text-brand hover:underline">Sửa</Link>
                     <form action={deleteProduct}>
                       <input type="hidden" name="id" value={p.id} />
-                      <button className="text-red-500 hover:underline">Xóa</button>
+                      <ConfirmButton
+                        className="text-red-500 hover:underline"
+                        message={`Xóa sản phẩm "${p.name}"? Hành động này không thể hoàn tác.`}
+                      >
+                        Xóa
+                      </ConfirmButton>
                     </form>
                   </div>
                 </td>
               </tr>
             ))}
+            {products.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  Không có sản phẩm nào.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm">
+          {page > 1 ? (
+            <Link href={qs(page - 1)} className="btn-outline px-3 py-1.5">← Trước</Link>
+          ) : (
+            <span className="btn-outline cursor-not-allowed px-3 py-1.5 opacity-40">← Trước</span>
+          )}
+          <span className="px-2 text-gray-500">Trang {page}/{totalPages}</span>
+          {page < totalPages ? (
+            <Link href={qs(page + 1)} className="btn-outline px-3 py-1.5">Sau →</Link>
+          ) : (
+            <span className="btn-outline cursor-not-allowed px-3 py-1.5 opacity-40">Sau →</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

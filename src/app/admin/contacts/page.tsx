@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { toggleRead, deleteMessage } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function AdminContactsPage() {
                 </form>
                 <form action={deleteMessage}>
                   <input type="hidden" name="id" value={m.id} />
-                  <button className="px-3 py-1 text-xs text-red-500 hover:underline">Xóa</button>
+                  <ConfirmButton className="px-3 py-1 text-xs text-red-500 hover:underline" message="Xóa tin nhắn này?">Xóa</ConfirmButton>
                 </form>
               </div>
             </div>

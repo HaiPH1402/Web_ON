@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { deleteArticle } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +49,7 @@ export default async function AdminArticlesPage() {
                     <Link href={`/admin/articles/${a.id}`} className="text-brand hover:underline">Sửa</Link>
                     <form action={deleteArticle}>
                       <input type="hidden" name="id" value={a.id} />
-                      <button className="text-red-500 hover:underline">Xóa</button>
+                      <ConfirmButton className="text-red-500 hover:underline" message="Xóa bài viết này?">Xóa</ConfirmButton>
                     </form>
                   </div>
                 </td>

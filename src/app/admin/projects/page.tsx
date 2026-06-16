@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { deleteProjectItem } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export default async function AdminProjectsPage() {
                     <Link href={`/admin/projects/${p.id}`} className="text-brand hover:underline">Sửa</Link>
                     <form action={deleteProjectItem}>
                       <input type="hidden" name="id" value={p.id} />
-                      <button className="text-red-500 hover:underline">Xóa</button>
+                      <ConfirmButton className="text-red-500 hover:underline" message="Xóa công trình này?">Xóa</ConfirmButton>
                     </form>
                   </div>
                 </td>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { deleteBrand } from "./actions";
+import ConfirmButton from "@/components/ConfirmButton";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function AdminBrandsPage() {
                     {b._count.products === 0 ? (
                       <form action={deleteBrand}>
                         <input type="hidden" name="id" value={b.id} />
-                        <button className="text-red-500 hover:underline">Xóa</button>
+                        <ConfirmButton className="text-red-500 hover:underline" message="Xóa thương hiệu này?">Xóa</ConfirmButton>
                       </form>
                     ) : (
                       <span className="cursor-not-allowed text-gray-300" title="Còn sản phẩm, không thể xóa">
