@@ -134,7 +134,8 @@ export default async function HomePage() {
           </Link>
         </Reveal>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {categories.map((c, i) => (
+          {/* Trang chủ chỉ hiển thị 6 danh mục cho gọn; xem hết ở trang Sản phẩm */}
+          {categories.slice(0, 6).map((c, i) => (
             <Reveal key={c.id} delay={i * 40}>
               <Link
                 href={`/san-pham?category=${c.slug}`}
