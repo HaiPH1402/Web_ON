@@ -73,7 +73,8 @@ export default async function AdminProductsPage({
                 label={c.name}
                 count={c._count.products}
                 editHref={`/admin/categories/${c.id}`}
-                deleteId={c._count.products === 0 ? c.id : undefined}
+                deleteId={c.id}
+                canDelete={c._count.products === 0}
               />
             ))}
           </nav>
@@ -181,6 +182,7 @@ function CatLink({
   count,
   editHref,
   deleteId,
+  canDelete,
 }: {
   href: string;
   active: boolean;
@@ -188,6 +190,7 @@ function CatLink({
   count: number;
   editHref?: string;
   deleteId?: number;
+  canDelete?: boolean;
 }) {
   return (
     <div
@@ -202,23 +205,31 @@ function CatLink({
         {editHref && (
           <Link
             href={editHref}
-            className="text-xs text-gray-300 opacity-0 hover:text-brand group-hover:opacity-100"
+            className="text-xs text-gray-400 hover:text-brand"
             title="Sửa danh mục"
           >
-            ✎
+            Sửa
           </Link>
         )}
-        {deleteId && (
-          <form action={deleteCategory}>
-            <input type="hidden" name="id" value={deleteId} />
-            <ConfirmButton
-              className="text-xs text-gray-300 opacity-0 hover:text-red-500 group-hover:opacity-100"
-              message={`Xóa danh mục "${label}"?`}
+        {deleteId &&
+          (canDelete ? (
+            <form action={deleteCategory}>
+              <input type="hidden" name="id" value={deleteId} />
+              <ConfirmButton
+                className="text-xs text-gray-400 hover:text-red-500"
+                message={`Xóa danh mục "${label}"?`}
+              >
+                Xóa
+              </ConfirmButton>
+            </form>
+          ) : (
+            <span
+              className="cursor-not-allowed text-xs text-gray-300"
+              title="Còn sản phẩm, không thể xóa"
             >
-              ✕
-            </ConfirmButton>
-          </form>
-        )}
+              Xóa
+            </span>
+          ))}
         <span className={`text-xs ${active ? "text-brand" : "text-gray-400"}`}>{count}</span>
       </div>
     </div>
